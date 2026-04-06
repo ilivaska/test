@@ -78,7 +78,7 @@ function sendMobileDeviceMessage() {
  * The cloud VM / Unreal app can take a bit longer even after the player reports ready.
  * So after `loadingComplete`, retry a few times to reduce the chance of missing the app startup window.
  */
-function queueMobileReadyMessage() {
+/*function queueMobileReadyMessage() {
 	if (!isMobileDevice() || mobileMessageSent) {
 		return;
 	}
@@ -86,7 +86,7 @@ function queueMobileReadyMessage() {
 	mobileRetryTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
 	mobileRetryTimeouts = [];
 
-	const retryDelaysMs = [0, 1500, 4000, 8000];
+	const retryDelaysMs = [0, 1500, 4000];
 
 	retryDelaysMs.forEach((delay) => {
 		const timeoutId = window.setTimeout(() => {
@@ -97,7 +97,7 @@ function queueMobileReadyMessage() {
 
 		mobileRetryTimeouts.push(timeoutId);
 	});
-}
+}*/
 
 /**
  * Send clipboard text to the Streampixel iframe.
