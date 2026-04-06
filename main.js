@@ -178,4 +178,11 @@ window.addEventListener("message", (event) => {
  * Extra fallback: on the first user interaction after the stream is ready,
  * try once more in case Unreal finished initializing slightly after loadingComplete.
  */
+function handleFirstInteractionAfterReady() {
+	if (streamIsReady && isMobileDevice() && !mobileMessageSent) {
+		sendMobileDeviceMessage();
+	}
+}
 
+document.addEventListener("click", handleFirstInteractionAfterReady, { once: true });
+document.addEventListener("touchstart", handleFirstInteractionAfterReady, { once: true });
