@@ -86,7 +86,7 @@ function queueMobileReadyMessage() {
 	mobileRetryTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
 	mobileRetryTimeouts = [];
 
-	const retryDelaysMs = [1500, 4000];
+	const retryDelaysMs = [0, 1500, 4000];
 
 	retryDelaysMs.forEach((delay) => {
 		const timeoutId = window.setTimeout(() => {
