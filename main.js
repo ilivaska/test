@@ -22,8 +22,7 @@ function postPayloadToStream(payload) {
 		return false;
 	}
 
-	// IMPORTANT: send the payload as an OBJECT, not JSON.stringify(payload).
-	// The manual desktop path that already worked uses this route.
+	
 	streamIframe.contentWindow.postMessage(payload, STREAMPixel_ORIGIN);
 	console.log("[Stream] Sent payload:", payload);
 	return true;
