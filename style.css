@@ -4,11 +4,18 @@
 	font-weight: 100 900;
 }
 
-body {
+/* 1. iOS LOCKDOWN - Prevents "bounce" and gesture stealing */
+html, body {
 	margin: 0;
 	padding: 0;
+	width: 100%;
+	height: 100%;
 	background-color: #000;
 	font-family: "darkergrotesque";
+	overflow: hidden !important;
+	position: fixed; /* Essential for iOS touch stability */
+	touch-action: none;
+	-webkit-overflow-scrolling: none;
 }
 
 a {
@@ -38,14 +45,16 @@ h2 {
 	display: inline-block;
 }
 
+/* 2. CONTAINER SETUP */
 .container {
-	width: 100svw;
-	height: 100svh;
+	width: 100vw;
+	height: 100vh;
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	justify-content: stretch;
 	position: relative;
+	touch-action: none;
 }
 
 .navigation {
@@ -59,6 +68,7 @@ h2 {
 	padding-left: 1rem;
 	padding-right: 1rem;
 	box-sizing: border-box;
+	flex-shrink: 0;
 }
 
 .title-container {
@@ -66,11 +76,17 @@ h2 {
 	font-size: 1.5rem;
 }
 
-.iframe-demo {
+/* 3. IFRAME & STREAM FIXES */
+.iframe-demo, #streamIframe {
 	flex-grow: 1;
 	border: none;
 	margin: 0;
 	padding: 0;
+	width: 100%;
+	height: 100%;
+	/* Forces iOS to pass raw touch events through to Unreal */
+	touch-action: none !important;
+	-webkit-tap-highlight-color: rgba(0,0,0,0);
 }
 
 .footer {
@@ -80,8 +96,10 @@ h2 {
 	padding-right: 1rem;
 	padding-bottom: 1rem;
 	align-items: center;
+	flex-shrink: 0;
 }
 
+/* 4. MOBILE BLOCKER */
 @media only screen and (max-width: 500px) {
 	.mobile-blocker {
 		position: fixed;
