@@ -21,8 +21,6 @@ function postPayloadToStream(payload) {
 		console.warn("[Stream] iframe or contentWindow not available.");
 		return false;
 	}
-
-	
 	streamIframe.contentWindow.postMessage(payload, STREAMPixel_ORIGIN);
 	console.log("[Stream] Sent payload:", payload);
 	return true;
@@ -137,3 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		scheduleMobileBurst("dom-ready");
 	}
 });
+
+/** * iOS TOUCH FIX: 
+ * Ensures the iframe remains the active focus target and blocks browser scroll-hijacking.
+ */
+document.addEventListener("touchstart", function () {
+    if (streamIframe) { streamIframe.focus(); }
+}, { passive: false });
+
+document.body.addEventListener('touchmove', function(e) {
+    if (e.target.id === "streamIframe") { e.preventDefault(); }
+}, { passive: false });
