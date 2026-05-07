@@ -1,5 +1,7 @@
 const STREAMPixel_ORIGIN = "https://share.streampixel.io";
 const streamIframe = document.getElementById("streamIframe");
+const playerShell = document.getElementById("playerShell");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
 const MOBILE_VALUE = "Mobile";
 const BURST_DELAYS_MS = [0, 1000, 5000, 30000];
 const scheduledBursts = new Set();
@@ -21,6 +23,7 @@ function postPayloadToStream(payload) {
 		console.warn("[Stream] iframe or contentWindow not available.");
 		return false;
 	}
+
 	streamIframe.contentWindow.postMessage(payload, STREAMPixel_ORIGIN);
 	console.log("[Stream] Sent payload:", payload);
 	return true;
@@ -53,6 +56,84 @@ function scheduleMobileBurst(triggerName) {
 			sendMobileMarker();
 		}, delayMs);
 	});
+}
+
+function getActiveFullscreenElement() {
+	return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function isFullscreenActive() {
+	return !!getActiveFullscreenElement();
+}
+
+function updateFullscreenButtonLabel() {
+	if (!fullscreenBtn) return;
+	fullscreenBtn.textContent = isFullscreenActive() ? "Exit Fullscreen" : "Fullscreen";
+}
+
+function focusStreamAfterTransition(delayMs = 120) {
+	window.setTimeout(() => {
+		if (streamIframe) {
+			streamIframe.focus();
+			console.log("[Fullscreen] Refocused stream iframe.");
+		}
+	}, delayMs);
+}
+
+async function enterFullscreenForShell() {
+	if (!playerShell) return;
+
+	if (playerShell.requestFullscreen) {
+		await playerShell.requestFullscreen({ navigationUI: "hide" });
+		return;
+	}
+
+	if (playerShell.webkitRequestFullscreen) {
+		playerShell.webkitRequestFullscreen();
+		return;
+	}
+
+	throw new Error("Fullscreen API not available for this element.");
+}
+
+async function exitFullscreenForDocument() {
+	if (document.exitFullscreen) {
+		await document.exitFullscreen();
+		return;
+	}
+
+	if (document.webkitExitFullscreen) {
+		document.webkitExitFullscreen();
+		return;
+	}
+
+	throw new Error("Exit fullscreen API not available.");
+}
+
+async function toggleFullscreen(event) {
+	if (event) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
+
+	if (!playerShell) {
+		console.warn("[Fullscreen] playerShell not found.");
+		return;
+	}
+
+	try {
+		if (!isFullscreenActive()) {
+			console.log("[Fullscreen] Entering fullscreen from parent page.");
+			await enterFullscreenForShell();
+		} else {
+			console.log("[Fullscreen] Exiting fullscreen from parent page.");
+			await exitFullscreenForDocument();
+		}
+		focusStreamAfterTransition();
+		scheduleMobileBurst("fullscreen-toggle");
+	} catch (err) {
+		console.warn("[Fullscreen] Failed:", err);
+	}
 }
 
 async function handlePasteButtonClick() {
@@ -109,11 +190,31 @@ window.addEventListener("message", (event) => {
 	}
 });
 
+window.addEventListener("fullscreenchange", () => {
+	console.log("[Fullscreen] fullscreenchange:", getActiveFullscreenElement());
+	updateFullscreenButtonLabel();
+	focusStreamAfterTransition();
+	scheduleMobileBurst("fullscreenchange");
+});
+
+window.addEventListener("webkitfullscreenchange", () => {
+	console.log("[Fullscreen] webkitfullscreenchange:", getActiveFullscreenElement());
+	updateFullscreenButtonLabel();
+	focusStreamAfterTransition();
+	scheduleMobileBurst("webkitfullscreenchange");
+});
+
 if (streamIframe) {
 	streamIframe.addEventListener("load", () => {
 		console.log("[Stream] iframe load event fired.");
 		scheduleMobileBurst("iframe-load");
 	});
+}
+
+if (fullscreenBtn) {
+	fullscreenBtn.addEventListener("click", toggleFullscreen);
+	fullscreenBtn.addEventListener("touchstart", toggleFullscreen, { passive: false });
+	fullscreenBtn.addEventListener("pointerdown", toggleFullscreen);
 }
 
 document.addEventListener("click", () => {
@@ -130,17 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		btn.addEventListener("click", handlePasteButtonClick);
 		console.log("[Clipboard] Paste button wired.");
 	}
+	updateFullscreenButtonLabel();
 	if (isMobileDevice()) {
 		console.log("[Mobile] Mobile device detected.");
 		scheduleMobileBurst("dom-ready");
 	}
 });
-
-
-document.addEventListener("touchstart", function () {
-    if (streamIframe) { streamIframe.focus(); }
-}, { passive: false });
-
-document.body.addEventListener('touchmove', function(e) {
-    if (e.target.id === "streamIframe") { e.preventDefault(); }
-}, { passive: false });
