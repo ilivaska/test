@@ -136,9 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 });
 
-/** * iOS TOUCH FIX: 
- * Ensures the iframe remains the active focus target and blocks browser scroll-hijacking.
- */
+
 document.addEventListener("touchstart", function () {
     if (streamIframe) { streamIframe.focus(); }
 }, { passive: false });
