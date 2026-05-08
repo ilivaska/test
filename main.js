@@ -1,14 +1,12 @@
 const STREAMPixel_ORIGIN = "https://share.streampixel.io";
 const streamIframe = document.getElementById("streamIframe");
-const playerShell = document.getElementById("playerShell");
-const fullscreenBtn = document.getElementById("fullscreenBtn");
 const navbar = document.getElementById("navbar");
 const footer = document.getElementById("footer");
 const MOBILE_VALUE = "Mobile";
 const BURST_DELAYS_MS = [0, 1000, 5000, 30000];
 const scheduledBursts = new Set();
-const IOS_PSEUDO_FULLSCREEN_CLASS = "ios-pseudo-fullscreen";
-let lastFullscreenToggleAt = 0;
+const APP_MODE_CLASS = "app-mode";
+const INSTALLABLE_CLASS = "installable-web-app";
 
 function isMobileDevice() {
 	const ua = navigator.userAgent || navigator.vendor || window.opera || "";
@@ -25,8 +23,30 @@ function isIOSDevice() {
 	return isAppleMobileUA || isTouchMac;
 }
 
-function prefersPseudoFullscreen() {
-	return isIOSDevice();
+function shouldUseStandaloneLayout() {
+	const displayStandalone = window.matchMedia("(display-mode: standalone)").matches;
+	const displayFullscreen = window.matchMedia("(display-mode: fullscreen)").matches;
+	const legacyIOSStandalone = window.navigator.standalone === true;
+	return displayStandalone || displayFullscreen || legacyIOSStandalone;
+}
+
+function applyAppModeLayout() {
+	const appMode = shouldUseStandaloneLayout();
+	document.documentElement.classList.toggle(APP_MODE_CLASS, appMode);
+	document.body.classList.toggle(APP_MODE_CLASS, appMode);
+	if (appMode) {
+		if (navbar) navbar.setAttribute("aria-hidden", "true");
+		if (footer) footer.setAttribute("aria-hidden", "true");
+	} else {
+		if (navbar) navbar.removeAttribute("aria-hidden");
+		if (footer) footer.removeAttribute("aria-hidden");
+	}
+}
+
+function markInstallableEnvironment() {
+	const installable = isIOSDevice() || "BeforeInstallPromptEvent" in window || window.matchMedia("(display-mode: standalone)").matches;
+	document.documentElement.classList.toggle(INSTALLABLE_CLASS, installable);
+	document.body.classList.toggle(INSTALLABLE_CLASS, installable);
 }
 
 function hideNavbar() {
@@ -73,140 +93,13 @@ function scheduleMobileBurst(triggerName) {
 	});
 }
 
-function getActiveFullscreenElement() {
-	return document.fullscreenElement || document.webkitFullscreenElement || null;
-}
-
-function isPseudoFullscreenActive() {
-	return document.documentElement.classList.contains(IOS_PSEUDO_FULLSCREEN_CLASS);
-}
-
-function isFullscreenActive() {
-	return !!getActiveFullscreenElement() || isPseudoFullscreenActive();
-}
-
-function updateFullscreenButtonLabel() {
-	if (!fullscreenBtn) return;
-	fullscreenBtn.textContent = isFullscreenActive() ? "Exit Fullscreen" : "Fullscreen";
-}
-
-function focusStreamAfterTransition(delayMs = 120) {
+function focusStream(delayMs = 120) {
 	window.setTimeout(() => {
 		if (streamIframe) {
 			streamIframe.focus();
-			console.log("[Fullscreen] Refocused stream iframe.");
+			console.log("[Stream] Refocused stream iframe.");
 		}
 	}, delayMs);
-}
-
-function syncPseudoFullscreenViewport() {
-	if (!isPseudoFullscreenActive() || !playerShell) return;
-	const viewport = window.visualViewport;
-	const width = viewport ? viewport.width : window.innerWidth;
-	const height = viewport ? viewport.height : window.innerHeight;
-	playerShell.style.width = `${Math.round(width)}px`;
-	playerShell.style.height = `${Math.round(height)}px`;
-}
-
-function enterPseudoFullscreen() {
-	document.documentElement.classList.add(IOS_PSEUDO_FULLSCREEN_CLASS);
-	document.body.classList.add(IOS_PSEUDO_FULLSCREEN_CLASS);
-	if (navbar) navbar.setAttribute("aria-hidden", "true");
-	if (footer) footer.setAttribute("aria-hidden", "true");
-	syncPseudoFullscreenViewport();
-	window.scrollTo(0, 0);
-	console.log("[Fullscreen] Entered iOS pseudo fullscreen.");
-}
-
-function exitPseudoFullscreen() {
-	document.documentElement.classList.remove(IOS_PSEUDO_FULLSCREEN_CLASS);
-	document.body.classList.remove(IOS_PSEUDO_FULLSCREEN_CLASS);
-	if (navbar) navbar.removeAttribute("aria-hidden");
-	if (footer) footer.removeAttribute("aria-hidden");
-	if (playerShell) {
-		playerShell.style.removeProperty("width");
-		playerShell.style.removeProperty("height");
-	}
-	console.log("[Fullscreen] Exited iOS pseudo fullscreen.");
-}
-
-async function enterNativeFullscreen() {
-	if (!playerShell) return;
-
-	if (playerShell.requestFullscreen) {
-		await playerShell.requestFullscreen({ navigationUI: "hide" });
-		return;
-	}
-
-	if (playerShell.webkitRequestFullscreen) {
-		playerShell.webkitRequestFullscreen();
-		return;
-	}
-
-	throw new Error("Fullscreen API not available for this element.");
-}
-
-async function exitNativeFullscreen() {
-	if (document.exitFullscreen) {
-		await document.exitFullscreen();
-		return;
-	}
-
-	if (document.webkitExitFullscreen) {
-		document.webkitExitFullscreen();
-		return;
-	}
-
-	throw new Error("Exit fullscreen API not available.");
-}
-
-async function toggleFullscreen(event) {
-	if (event) {
-		event.preventDefault();
-		event.stopPropagation();
-	}
-
-	const now = Date.now();
-	if (now - lastFullscreenToggleAt < 700) {
-		console.log("[Fullscreen] Ignored duplicate toggle event.");
-		return;
-	}
-	lastFullscreenToggleAt = now;
-
-	if (!playerShell) {
-		console.warn("[Fullscreen] playerShell not found.");
-		return;
-	}
-
-	try {
-		if (prefersPseudoFullscreen()) {
-			if (isPseudoFullscreenActive()) {
-				exitPseudoFullscreen();
-			} else {
-				enterPseudoFullscreen();
-			}
-		} else if (!getActiveFullscreenElement()) {
-			console.log("[Fullscreen] Entering native fullscreen.");
-			await enterNativeFullscreen();
-		} else {
-			console.log("[Fullscreen] Exiting native fullscreen.");
-			await exitNativeFullscreen();
-		}
-
-		updateFullscreenButtonLabel();
-		focusStreamAfterTransition();
-		scheduleMobileBurst("fullscreen-toggle");
-	} catch (err) {
-		console.warn("[Fullscreen] Native fullscreen failed, using pseudo fallback:", err);
-		if (isPseudoFullscreenActive()) {
-			exitPseudoFullscreen();
-		} else {
-			enterPseudoFullscreen();
-		}
-		updateFullscreenButtonLabel();
-		focusStreamAfterTransition();
-		scheduleMobileBurst("fullscreen-toggle-fallback");
-	}
 }
 
 async function handlePasteButtonClick() {
@@ -257,45 +150,32 @@ window.addEventListener("message", (event) => {
 	if (data && typeof data === "object" && data.type === "stream-state") {
 		console.log("[Stream] State:", data.value);
 		if (data.value === "loadingComplete") {
-			if (isSmallScreen && !isPseudoFullscreenActive()) hideNavbar();
+			if (isSmallScreen && !shouldUseStandaloneLayout()) hideNavbar();
 			scheduleMobileBurst("loadingComplete");
+			focusStream();
 		}
 	}
 });
 
-window.addEventListener("fullscreenchange", () => {
-	console.log("[Fullscreen] fullscreenchange:", getActiveFullscreenElement());
-	updateFullscreenButtonLabel();
-	focusStreamAfterTransition();
-	scheduleMobileBurst("fullscreenchange");
+window.addEventListener("resize", () => {
+	applyAppModeLayout();
+	focusStream(180);
 });
 
-window.addEventListener("webkitfullscreenchange", () => {
-	console.log("[Fullscreen] webkitfullscreenchange:", getActiveFullscreenElement());
-	updateFullscreenButtonLabel();
-	focusStreamAfterTransition();
-	scheduleMobileBurst("webkitfullscreenchange");
-});
-
-window.addEventListener("resize", syncPseudoFullscreenViewport);
-window.visualViewport?.addEventListener("resize", syncPseudoFullscreenViewport);
-window.visualViewport?.addEventListener("scroll", syncPseudoFullscreenViewport);
 window.addEventListener("orientationchange", () => {
-	syncPseudoFullscreenViewport();
-	focusStreamAfterTransition(250);
+	applyAppModeLayout();
+	focusStream(250);
 });
+
+window.matchMedia("(display-mode: standalone)").addEventListener?.("change", applyAppModeLayout);
+window.matchMedia("(display-mode: fullscreen)").addEventListener?.("change", applyAppModeLayout);
 
 if (streamIframe) {
 	streamIframe.addEventListener("load", () => {
 		console.log("[Stream] iframe load event fired.");
 		scheduleMobileBurst("iframe-load");
+		focusStream();
 	});
-}
-
-if (fullscreenBtn) {
-	fullscreenBtn.addEventListener("click", toggleFullscreen);
-	fullscreenBtn.addEventListener("touchstart", toggleFullscreen, { passive: false });
-	fullscreenBtn.addEventListener("pointerdown", toggleFullscreen, { passive: false });
 }
 
 document.addEventListener("click", () => {
@@ -306,25 +186,26 @@ document.addEventListener("touchstart", () => {
 	scheduleMobileBurst("first-touch");
 }, { once: true, passive: true });
 
-document.addEventListener("keydown", (event) => {
-	if (event.key === "Escape" && isPseudoFullscreenActive()) {
-		exitPseudoFullscreen();
-		updateFullscreenButtonLabel();
-	}
-});
-
 document.addEventListener("DOMContentLoaded", () => {
 	const btn = document.getElementById("pasteClipboardBtn");
 	if (btn) {
 		btn.addEventListener("click", handlePasteButtonClick);
 		console.log("[Clipboard] Paste button wired.");
 	}
-	updateFullscreenButtonLabel();
+
+	markInstallableEnvironment();
+	applyAppModeLayout();
+
 	if (isMobileDevice()) {
 		console.log("[Mobile] Mobile device detected.");
 		scheduleMobileBurst("dom-ready");
 	}
-	if (prefersPseudoFullscreen()) {
-		console.log("[Fullscreen] iOS detected: using pseudo fullscreen fallback.");
+
+	if (shouldUseStandaloneLayout()) {
+		console.log("[AppMode] Running in installed web app mode.");
+	}
+
+	if (isIOSDevice()) {
+		console.log("[Install] iOS detected: use Add to Home Screen and keep 'Open as Web App' enabled.");
 	}
 });
