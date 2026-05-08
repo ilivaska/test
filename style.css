@@ -10,11 +10,7 @@ body {
 	padding: 0;
 	background-color: #000;
 	font-family: "darkergrotesque";
-}
-
-body.ios-pseudo-fullscreen {
-	overflow: hidden;
-	touch-action: manipulation;
+	min-height: 100%;
 }
 
 a {
@@ -87,30 +83,23 @@ h2 {
 	border: none;
 }
 
-.player-shell:fullscreen,
-.player-shell:-webkit-full-screen {
-	width: 100vw;
-	height: 100vh;
+html.app-mode,
+body.app-mode {
+	overflow: hidden;
 	background-color: #000;
 }
 
-.player-shell:fullscreen iframe,
-.player-shell:-webkit-full-screen iframe {
-	width: 100%;
-	height: 100%;
-}
-
-html.ios-pseudo-fullscreen .navigation,
-html.ios-pseudo-fullscreen .footer {
+html.app-mode .navigation,
+html.app-mode .footer {
 	display: none !important;
 }
 
-html.ios-pseudo-fullscreen .container {
+html.app-mode .container {
 	width: 100vw;
 	height: 100dvh;
 }
 
-html.ios-pseudo-fullscreen .player-shell {
+html.app-mode .player-shell {
 	position: fixed;
 	inset: 0;
 	z-index: 9998;
@@ -124,35 +113,9 @@ html.ios-pseudo-fullscreen .player-shell {
 	background-color: #000;
 }
 
-html.ios-pseudo-fullscreen .player-shell iframe {
+html.app-mode .player-shell iframe {
 	width: 100%;
 	height: 100%;
-}
-
-.fullscreen-btn {
-	position: absolute;
-	right: 1rem;
-	bottom: 1rem;
-	z-index: 9999;
-	border: 1px solid rgba(255, 255, 255, 0.45);
-	background: rgba(0, 0, 0, 0.65);
-	color: #fff;
-	padding: 0.65rem 0.9rem;
-	border-radius: 999px;
-	font: inherit;
-	font-size: 1rem;
-	font-weight: 600;
-	cursor: pointer;
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	touch-action: manipulation;
-	-webkit-user-select: none;
-	user-select: none;
-	-webkit-touch-callout: none;
-}
-
-.fullscreen-btn:active {
-	transform: scale(0.98);
 }
 
 .footer {
@@ -162,15 +125,6 @@ html.ios-pseudo-fullscreen .player-shell iframe {
 	padding-right: 1rem;
 	padding-bottom: 1rem;
 	align-items: center;
-}
-
-@media only screen and (max-width: 700px) {
-	.fullscreen-btn {
-		right: max(0.75rem, env(safe-area-inset-right));
-		bottom: max(0.75rem, env(safe-area-inset-bottom));
-		padding: 0.6rem 0.8rem;
-		font-size: 0.95rem;
-	}
 }
 
 @media only screen and (max-width: 500px) {
@@ -192,7 +146,7 @@ html.ios-pseudo-fullscreen .player-shell iframe {
 		box-sizing: border-box;
 	}
 
-	html.ios-pseudo-fullscreen .mobile-blocker {
+	html.app-mode .mobile-blocker {
 		display: none !important;
 	}
 }
